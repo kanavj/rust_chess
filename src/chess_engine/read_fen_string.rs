@@ -44,7 +44,7 @@ impl Board {
                     panic!("How tf did this happen? What is that piece?")
                 }
             };
-            let mut has_moved = true;
+            let mut has_moved = false;
             if p_type == PieceType::Pawn {
                 if color == Color::White && row == 1 {
                     has_moved = false;

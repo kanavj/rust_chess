@@ -2,7 +2,7 @@ use super::moves::*;
 use crate::chess_engine::piece::{Piece, PieceType};
 #[derive(Clone, Debug)]
 pub struct Board {
-    pub board: Vec<Vec<Option<Piece>>>,
+    pub board: [[Option<Piece>; 8]; 8],
     pub next_player: Color,
     pub last_move: Move,
 }
@@ -31,14 +31,7 @@ pub fn valid_position(position: (u8, u8)) -> bool {
 
 impl Board {
     pub fn new_blank_board() -> Board {
-        let mut new_board: Vec<Vec<Option<Piece>>> = Vec::new();
-        for _ in 0..8 {
-            let mut board_row: Vec<Option<Piece>> = Vec::new();
-            for _ in 0..8 {
-                board_row.push(None);
-            }
-            new_board.push(board_row);
-        }
+        let new_board: [[Option<Piece>; 8]; 8] = [[None; 8]; 8];
 
         // Making just a weird first move for no reason lule
         let sample_last_move = Move::Normal(NormalMove {

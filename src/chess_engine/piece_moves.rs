@@ -3,19 +3,23 @@ use super::moves::*;
 use crate::chess_engine::piece::{Piece, PieceType};
 
 impl Board {
-    pub fn get_piece_moves(&self, from_position: (u8, u8), piece: &Piece) -> Vec<Move> {
-        match piece.piece_type {
-            PieceType::Knight => self.knight_legal_moves(from_position, piece),
-            PieceType::Bishop => self.bishop_legal_moves(from_position, piece),
-            PieceType::Rook => self.rook_legal_moves(from_position, piece),
-            PieceType::Queen => self.queen_legalmoves(from_position, piece),
-            PieceType::King => self.king_legal_moves(from_position, piece),
-            PieceType::Pawn => self.pawn_legal_moves(from_position, piece),
+    pub fn get_piece_moves(&self, from_position: (u8, u8)) -> Vec<Move> {
+        // Check if piece is present
+        match self.board[from_position.0 as usize][from_position.1 as usize] {
+            Some(piece) => match piece.piece_type {
+                PieceType::Knight => self.knight_legal_moves(from_position, piece),
+                PieceType::Bishop => self.bishop_legal_moves(from_position, piece),
+                PieceType::Rook => self.rook_legal_moves(from_position, piece),
+                PieceType::Queen => self.queen_legalmoves(from_position, piece),
+                PieceType::King => self.king_legal_moves(from_position, piece),
+                PieceType::Pawn => self.pawn_legal_moves(from_position, piece),
+            },
+            None => Vec::new(),
         }
     }
 
     // Knight ez
-    pub fn knight_legal_moves(&self, from_position: (u8, u8), piece: &Piece) -> Vec<Move> {
+    pub fn knight_legal_moves(&self, from_position: (u8, u8), piece: Piece) -> Vec<Move> {
         let moves = [
             (-2, -1),
             (-1, -2),
@@ -34,8 +38,8 @@ impl Board {
                 if new_col < 0 || new_row < 0 {
                     return None;
                 }
-                let newpos = (new_row as u8, new_col as u8);
-                if valid_position(newpos) {
+                let to_position = (new_row as u8, new_col as u8);
+                if valid_position(to_position) {
                     let capture = match self.board[new_row as usize][new_col as usize] {
                         Some(other_piece) => {
                             if piece.color == other_piece.color {
@@ -47,9 +51,9 @@ impl Board {
                         None => None,
                     };
                     let my_move = Move::Normal(NormalMove {
-                        piece: *piece,
+                        piece: piece,
                         from_position: from_position,
-                        to_position: newpos,
+                        to_position,
                         capture: capture,
                     });
                     Some(my_move)
@@ -62,7 +66,7 @@ impl Board {
     }
 
     // Helper function to go along a direction until you reach the end of the board
-    fn move_in_dir(
+    fn sliding_moves_in_dir(
         &self,
         from_position: (u8, u8),
         dir: (i32, i32),
@@ -75,12 +79,12 @@ impl Board {
         (1..max_dist + 1).filter_map(move |i| {
             let new_row = from_position.0 as i32 + dir.0 * i;
             let new_col = from_position.1 as i32 + dir.1 * i;
-            let newpos = (new_row as u8, new_col as u8);
+            let to_position = (new_row as u8, new_col as u8);
 
-            if valid_position(newpos) {
+            if valid_position(to_position) {
                 match self.board[new_row as usize][new_col as usize] {
-                    Some(other_piece) => Some((newpos, Some(other_piece))),
-                    None => Some((newpos, None)),
+                    Some(other_piece) => Some((to_position, Some(other_piece))),
+                    None => Some((to_position, None)),
                 }
             } else {
                 None
@@ -88,15 +92,15 @@ impl Board {
         })
     }
 
-    pub fn bishop_legal_moves(&self, from_position: (u8, u8), piece: &Piece) -> Vec<Move> {
+    pub fn bishop_legal_moves(&self, from_position: (u8, u8), piece: Piece) -> Vec<Move> {
         let mut possible_moves: Vec<Move> = Vec::new();
         let directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
         for dir in directions {
-            for (newpos, capture) in self.move_in_dir(from_position, dir, None) {
+            for (to_position, capture) in self.sliding_moves_in_dir(from_position, dir, None) {
                 let my_move = NormalMove {
-                    piece: *piece,
+                    piece: piece,
                     from_position: from_position,
-                    to_position: newpos,
+                    to_position,
                     capture: capture,
                 };
                 // Check if can capture something on the way
@@ -114,15 +118,15 @@ impl Board {
         possible_moves
     }
 
-    pub fn rook_legal_moves(&self, from_position: (u8, u8), piece: &Piece) -> Vec<Move> {
+    pub fn rook_legal_moves(&self, from_position: (u8, u8), piece: Piece) -> Vec<Move> {
         let mut possible_moves = Vec::new();
         let directions = [(-1, 0), (0, -1), (1, 0), (0, 1)];
         for dir in directions {
-            for (newpos, capture) in self.move_in_dir(from_position, dir, None) {
+            for (to_position, capture) in self.sliding_moves_in_dir(from_position, dir, None) {
                 let my_move = NormalMove {
-                    piece: *piece,
+                    piece: piece,
                     from_position: from_position,
-                    to_position: newpos,
+                    to_position,
                     capture: capture,
                 };
                 // Check if can capture something on the way
@@ -140,13 +144,13 @@ impl Board {
         possible_moves
     }
 
-    pub fn queen_legalmoves(&self, from_position: (u8, u8), piece: &Piece) -> Vec<Move> {
+    pub fn queen_legalmoves(&self, from_position: (u8, u8), piece: Piece) -> Vec<Move> {
         let mut b_moves = self.bishop_legal_moves(from_position, piece);
         b_moves.append(&mut self.rook_legal_moves(from_position, piece));
         b_moves
     }
 
-    pub fn king_legal_moves(&self, from_position: (u8, u8), piece: &Piece) -> Vec<Move> {
+    pub fn king_legal_moves(&self, from_position: (u8, u8), piece: Piece) -> Vec<Move> {
         let mut possible_moves = Vec::new();
         let directions = [
             (-1, 0),
@@ -159,11 +163,11 @@ impl Board {
             (1, 1),
         ];
         for dir in directions {
-            for (newpos, capture) in self.move_in_dir(from_position, dir, Some(1)) {
+            for (to_position, capture) in self.sliding_moves_in_dir(from_position, dir, Some(1)) {
                 let my_move = NormalMove {
-                    piece: *piece,
+                    piece: piece,
                     from_position: from_position,
-                    to_position: newpos,
+                    to_position,
                     capture: capture,
                 };
                 // Check if can capture something on the way
@@ -185,7 +189,7 @@ impl Board {
         possible_moves
     }
 
-    pub fn king_castles_moves(&self, piece: &Piece) -> Vec<Move> {
+    pub fn king_castles_moves(&self, piece: Piece) -> Vec<Move> {
         let mut castle_moves = Vec::new();
         if piece.has_moved {
             return castle_moves;
@@ -226,14 +230,12 @@ impl Board {
         castle_moves
     }
 
-    pub fn pawn_legal_moves(&self, from_position: (u8, u8), piece: &Piece) -> Vec<Move> {
+    pub fn pawn_legal_moves(&self, from_position: (u8, u8), piece: Piece) -> Vec<Move> {
         let mut possible_moves = Vec::new();
         let (vertical_directions, capture_directions) = match piece.color {
             Color::White => ([(1, 0)], [(1, 1), (1, -1)]),
             Color::Black => ([(-1, 0)], [(-1, 1), (-1, -1)]),
         };
-
-        println!("{:?}", from_position);
 
         // Don't capture here
         for dir in vertical_directions {
@@ -241,33 +243,51 @@ impl Board {
             if !piece.has_moved {
                 distance = 2;
             }
-            for (newpos, capture) in self.move_in_dir(from_position, dir, Some(distance)) {
+            for (to_position, capture) in
+                self.sliding_moves_in_dir(from_position, dir, Some(distance))
+            {
                 if let Some(_) = capture {
                     break;
                 }
-                let my_move = NormalMove {
-                    piece: *piece,
-                    from_position: from_position,
-                    to_position: newpos,
-                    capture: None,
-                };
-                // Check for promotion
-                possible_moves.push(Move::Normal(my_move));
+                if check_pawn_promotion(to_position, piece) {
+                    possible_moves.extend_from_slice(&get_promotion_moves(
+                        from_position,
+                        to_position,
+                        piece,
+                    ));
+                } else {
+                    let my_move = NormalMove {
+                        piece: piece,
+                        from_position: from_position,
+                        to_position,
+                        capture: None,
+                    };
+
+                    possible_moves.push(Move::Normal(my_move));
+                }
             }
         }
 
         // Only capture here
         for dir in capture_directions {
-            for (newpos, capture) in self.move_in_dir(from_position, dir, Some(1)) {
+            for (to_position, capture) in self.sliding_moves_in_dir(from_position, dir, Some(1)) {
                 if let Some(other_piece) = capture {
                     if other_piece.color != piece.color {
-                        let my_move = NormalMove {
-                            piece: *piece,
-                            from_position: from_position,
-                            to_position: newpos,
-                            capture: Some(other_piece),
-                        };
-                        possible_moves.push(Move::Normal(my_move));
+                        if check_pawn_promotion(to_position, piece) {
+                            possible_moves.extend_from_slice(&get_promotion_moves(
+                                from_position,
+                                to_position,
+                                piece,
+                            ));
+                        } else {
+                            let my_move = NormalMove {
+                                piece: piece,
+                                from_position: from_position,
+                                to_position,
+                                capture: Some(other_piece),
+                            };
+                            possible_moves.push(Move::Normal(my_move));
+                        }
                     }
                 }
             }
@@ -277,16 +297,7 @@ impl Board {
         match self.last_move {
             Move::Normal(mv) => {
                 let dist_moved = (mv.from_position.0 as i32 - mv.to_position.0 as i32).abs();
-
-                println!("{:?}", mv.to_position.0 == from_position.0);
-                println!("{:?}", dist_moved == 2);
-                println!("{:?}", piece.piece_type == PieceType::Pawn);
-                println!("{:?}", piece.has_moved == false);
-
-                if piece.piece_type == PieceType::Pawn
-                    && mv.piece.has_moved == false
-                    && dist_moved == 2
-                {
+                if mv.piece.has_moved == false && dist_moved == 2 {
                     if from_position.0 == mv.to_position.0 {
                         println!("yay");
                         let x_diff = from_position.1 as i32 - mv.to_position.1 as i32;
@@ -308,4 +319,51 @@ impl Board {
 
         possible_moves
     }
+}
+
+fn check_pawn_promotion(to_position: (u8, u8), piece: Piece) -> bool {
+    assert_eq!(piece.piece_type, PieceType::Pawn);
+    (piece.color == Color::White && to_position.0 == 7)
+        || (piece.color == Color::Black && to_position.0 == 0)
+}
+
+fn get_promotion_moves(from_position: (u8, u8), to_position: (u8, u8), piece: Piece) -> [Move; 4] {
+    return [
+        Move::Promotion(PromotionMove {
+            from_position: from_position,
+            to_position: to_position,
+            new_piece: Piece {
+                color: piece.color,
+                piece_type: PieceType::Bishop,
+                has_moved: true,
+            },
+        }),
+        Move::Promotion(PromotionMove {
+            from_position: from_position,
+            to_position: to_position,
+            new_piece: Piece {
+                color: piece.color,
+                piece_type: PieceType::Knight,
+                has_moved: true,
+            },
+        }),
+        Move::Promotion(PromotionMove {
+            from_position: from_position,
+            to_position: to_position,
+            new_piece: Piece {
+                color: piece.color,
+                piece_type: PieceType::Rook,
+                has_moved: true,
+            },
+        }),
+        Move::Promotion(PromotionMove {
+            from_position: from_position,
+            to_position: to_position,
+            new_piece: Piece {
+                color: piece.color,
+                piece_type: PieceType::Queen,
+                has_moved: true,
+            },
+        }),
+    ];
 }

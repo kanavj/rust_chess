@@ -49,35 +49,74 @@ impl Board {
 
         for i in 0..self.board.len() {
             for j in 0..self.board[0].len() {
-                if let Some(piece) = self.board[i][j] {
-                    if piece.color == color {
-                        all_moves.append(&mut self.get_piece_moves((i as u8, j as u8), &piece));
-                    }
+                if let Some(piece) = self.board[i][j]
+                    && piece.color == color
+                {
+                    let mut piece_moves = self.get_piece_moves((i as u8, j as u8));
+                    all_moves.append(&mut piece_moves);
                 }
             }
         }
         all_moves
     }
 
-    pub fn get_all_legal_moves(&self, color: Color) -> Vec<Move> {
-        let candidate_moves: Vec<Move> = self.get_all_moves(color);
-        let mut all_legal_moves: Vec<Move> = Vec::new();
+    pub fn get_piece_legal_moves(&self, from_position: (u8, u8)) -> Vec<Move> {
+        let mut piece_legal_mvoes: Vec<Move> = Vec::new();
+        let piece = match self.board[from_position.0 as usize][from_position.1 as usize] {
+            Some(p) => p,
+            None => return piece_legal_mvoes,
+        };
+        let candidate_moves: Vec<Move> = self.get_piece_moves(from_position);
 
         for mv in candidate_moves {
             let mut copyboard = self.clone();
             // Simulate the next move
             copyboard.make_move(mv);
+
+            // If castling, place some kings to check if can castle
             match mv {
-                Move::Normal(norm_mv) => {}
-                Move::Castles(castles_mv) => {}
-                Move::EnPassant(ep_move) => {}
-                Move::Promotion(pr_move) => {}
+                Move::Castles(castles_mv) => {
+                    let new_king = Piece {
+                        color: piece.color,
+                        piece_type: PieceType::King,
+                        has_moved: false,
+                    };
+                    let row: usize = match castles_mv.color {
+                        Color::White => 0,
+                        Color::Black => 7,
+                    };
+                    match castles_mv.side {
+                        CastleSide::King => {
+                            copyboard.board[row][4] = Some(new_king);
+                            copyboard.board[row][5] = Some(new_king);
+                        }
+                        CastleSide::Queen => {
+                            copyboard.board[row][3] = Some(new_king);
+                        }
+                    }
+                }
+                _ => {}
             };
+
             // If we are in check after the move, it's not legal
-            if copyboard.in_check(color) {
+            if copyboard.in_check(piece.color) {
                 continue;
             }
-            all_legal_moves.push(mv);
+            piece_legal_mvoes.push(mv);
+        }
+        piece_legal_mvoes
+    }
+
+    pub fn get_all_legal_moves(&self, color: Color) -> Vec<Move> {
+        let mut all_legal_moves: Vec<Move> = Vec::new();
+        for i in 0..8 {
+            for j in 0..8 {
+                if let Some(piece) = self.board[i][j] {
+                    if piece.color == color {
+                        all_legal_moves.append(&mut self.get_piece_legal_moves((i as u8, j as u8)))
+                    }
+                }
+            }
         }
         all_legal_moves
     }
