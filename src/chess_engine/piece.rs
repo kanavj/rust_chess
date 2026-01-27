@@ -1,4 +1,4 @@
-use super::board::Color;
+use super::game::Color;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum PieceType {

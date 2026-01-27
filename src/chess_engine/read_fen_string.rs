@@ -1,13 +1,13 @@
-use super::board::{Board, Color};
+use super::game::{Color, Game};
 use super::piece::{Piece, PieceType};
 use std::io::{self, Error, ErrorKind};
 
 const FEN_LINE_SEPARATOR: char = '/';
 const ALLOWED_LOWERCASE_CHARS: [char; 6] = ['p', 'b', 'r', 'n', 'k', 'q'];
 
-impl Board {
-    pub fn from_fen_str(&mut self, fen: &str) -> Result<(), io::Error> {
-        self.clear();
+impl Game {
+    pub fn from_fen_str(fen: &str) -> Result<Game, io::Error> {
+        let mut game = Game::from_blank_board();
         check_fen_str(fen)?;
 
         let mut row = 7;
@@ -58,10 +58,11 @@ impl Board {
                 piece_type: p_type,
                 has_moved: has_moved,
             };
-            self.board[row as usize][col as usize] = Some(my_piece);
+            game.board[row as usize][col as usize] = Some(my_piece);
             col += 1;
         }
-        return Ok(());
+        game.next_legal_moves = game.get_all_legal_moves();
+        return Ok(game);
     }
 }
 

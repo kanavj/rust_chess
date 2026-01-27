@@ -1,8 +1,8 @@
-use super::board::*;
+use super::game::*;
 use super::moves::*;
 use crate::chess_engine::piece::{Piece, PieceType};
 
-impl Board {
+impl Game {
     pub fn get_piece_moves(&self, from_position: (usize, usize)) -> Vec<Move> {
         // Check if piece is present
         match self.board[from_position.0][from_position.1] {
@@ -233,40 +233,26 @@ impl Board {
 
     pub fn pawn_legal_moves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
         let mut possible_moves = Vec::new();
-        let (vertical_directions, capture_directions) = match piece.color {
-            Color::White => ([(1, 0)], [(1, 1), (1, -1)]),
-            Color::Black => ([(-1, 0)], [(-1, 1), (-1, -1)]),
+        let (vertical_dir, capture_directions) = match piece.color {
+            Color::White => ((1, 0), [(1, 1), (1, -1)]),
+            Color::Black => ((-1, 0), [(-1, 1), (-1, -1)]),
         };
 
         // Don't capture here
-        for dir in vertical_directions {
-            let mut distance = 1;
-            if !piece.has_moved {
-                distance = 2;
+        let distance = if piece.has_moved { 1 } else { 2 };
+        for (to_position, capture) in
+            self.sliding_moves_in_dir(from_position, vertical_dir, Some(distance))
+        {
+            if capture.is_some() {
+                break;
             }
-            for (to_position, capture) in
-                self.sliding_moves_in_dir(from_position, dir, Some(distance))
-            {
-                if let Some(_) = capture {
-                    break;
-                }
-                if check_pawn_promotion(to_position, piece) {
-                    possible_moves.extend_from_slice(&get_promotion_moves(
-                        from_position,
-                        to_position,
-                        piece,
-                    ));
-                } else {
-                    let my_move = NormalMove {
-                        piece: piece,
-                        from_position: from_position,
-                        to_position,
-                        capture: None,
-                    };
-
-                    possible_moves.push(Move::Normal(my_move));
-                }
-            }
+            add_pawn_move(
+                &mut possible_moves,
+                from_position,
+                to_position,
+                piece,
+                capture,
+            );
         }
 
         // Only capture here
@@ -274,50 +260,67 @@ impl Board {
             for (to_position, capture) in self.sliding_moves_in_dir(from_position, dir, Some(1)) {
                 if let Some(other_piece) = capture {
                     if other_piece.color != piece.color {
-                        if check_pawn_promotion(to_position, piece) {
-                            possible_moves.extend_from_slice(&get_promotion_moves(
-                                from_position,
-                                to_position,
-                                piece,
-                            ));
-                        } else {
-                            let my_move = NormalMove {
-                                piece: piece,
-                                from_position: from_position,
-                                to_position,
-                                capture: Some(other_piece),
-                            };
-                            possible_moves.push(Move::Normal(my_move));
-                        }
+                        add_pawn_move(
+                            &mut possible_moves,
+                            from_position,
+                            to_position,
+                            piece,
+                            capture,
+                        );
                     }
                 }
             }
         }
 
         // En Passant moves
-        match self.last_move {
-            Move::Normal(mv) => {
-                let dist_moved = (mv.from_position.0 as i32 - mv.to_position.0 as i32).abs();
-                if mv.piece.has_moved == false && dist_moved == 2 {
-                    if from_position.0 == mv.to_position.0 {
-                        let x_diff = from_position.1 as i32 - mv.to_position.1 as i32;
-                        if x_diff.abs() == 1 {
-                            possible_moves.push(Move::EnPassant(EnPassantMove {
-                                from_position: from_position,
-                                to_position: (
-                                    (from_position.0 as i32 + vertical_directions[0].0) as usize,
-                                    (from_position.1 as i32 - x_diff) as usize,
-                                ),
-                                pawn_capture_position: (mv.to_position),
-                            }))
+        if let Some(last_move) = self.move_history.last() {
+            match *last_move {
+                Move::Normal(mv) => {
+                    let dist_moved = (mv.from_position.0 as i32 - mv.to_position.0 as i32).abs();
+                    if mv.piece.has_moved == false
+                        && dist_moved == 2
+                        && mv.piece.piece_type == PieceType::Pawn
+                    {
+                        if from_position.0 == mv.to_position.0 {
+                            let x_diff = from_position.1 as i32 - mv.to_position.1 as i32;
+                            if x_diff.abs() == 1 {
+                                possible_moves.push(Move::EnPassant(EnPassantMove {
+                                    from_position: from_position,
+                                    to_position: (
+                                        (from_position.0 as i32 + vertical_dir.0) as usize,
+                                        (from_position.1 as i32 - x_diff) as usize,
+                                    ),
+                                    pawn_capture_position: (mv.to_position),
+                                }))
+                            }
                         }
                     }
                 }
-            }
-            _ => {}
-        };
+                _ => {}
+            };
+        }
 
         possible_moves
+    }
+}
+
+fn add_pawn_move(
+    possible_moves: &mut Vec<Move>,
+    from_position: (usize, usize),
+    to_position: (usize, usize),
+    piece: Piece,
+    capture: Option<Piece>,
+) {
+    if check_pawn_promotion(to_position, piece) {
+        possible_moves.extend_from_slice(&get_promotion_moves(from_position, to_position, piece));
+    } else {
+        let my_move = NormalMove {
+            piece: piece,
+            from_position: from_position,
+            to_position,
+            capture: capture,
+        };
+        possible_moves.push(Move::Normal(my_move));
     }
 }
 

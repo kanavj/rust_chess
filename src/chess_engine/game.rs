@@ -1,10 +1,21 @@
 use super::moves::*;
-use crate::chess_engine::piece::{Piece, PieceType};
+use super::piece::{Piece, PieceType};
+
 #[derive(Clone, Debug)]
-pub struct Board {
+pub struct Game {
     pub board: [[Option<Piece>; 8]; 8],
     pub next_player: Color,
-    pub last_move: Move,
+    pub move_history: Vec<Move>,
+    pub state: GameState,
+    pub next_legal_moves: Vec<Move>,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum GameState {
+    Normal,
+    InCheck(Color),
+    Checkmate(Color),
+    Stalemate,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -29,26 +40,19 @@ pub fn valid_position(position: (usize, usize)) -> bool {
     return true;
 }
 
-impl Board {
-    pub fn new_blank_board() -> Board {
-        let new_board: [[Option<Piece>; 8]; 8] = [[None; 8]; 8];
+impl Game {
+    pub fn from_blank_board() -> Game {
+        let blank_board: [[Option<Piece>; 8]; 8] = [[None; 8]; 8];
 
-        // Making just a weird first move for no reason lule
-        let sample_last_move = Move::Normal(NormalMove {
-            piece: Piece {
-                color: Color::Black,
-                piece_type: PieceType::Queen,
-                has_moved: false,
-            },
-            from_position: (2, 3),
-            to_position: (2, 3),
-            capture: None,
-        });
-        return Board {
-            board: new_board,
+        let mut new_game = Game {
+            board: blank_board,
             next_player: Color::White,
-            last_move: sample_last_move,
+            move_history: Vec::new(),
+            state: GameState::Normal,
+            next_legal_moves: Vec::new(),
         };
+        new_game.next_legal_moves = new_game.get_all_legal_moves();
+        return new_game;
     }
 
     pub fn clear(&mut self) {
@@ -59,8 +63,8 @@ impl Board {
         }
     }
 
-    pub fn new_standard_board() -> Board {
-        let mut new_board = Self::new_blank_board();
+    pub fn from_standard_board() -> Game {
+        let mut new_game = Self::from_blank_board();
 
         // Place white pieces first then mirror board
 
@@ -71,54 +75,54 @@ impl Board {
                 piece_type: PieceType::Pawn,
                 has_moved: false,
             };
-            new_board.board[1][i] = Some(white_pawn);
+            new_game.board[1][i] = Some(white_pawn);
         }
 
         // Rooks
-        new_board.board[0][0] = Some(Piece {
+        new_game.board[0][0] = Some(Piece {
             color: Color::White,
             piece_type: PieceType::Rook,
             has_moved: false,
         });
-        new_board.board[0][7] = Some(Piece {
+        new_game.board[0][7] = Some(Piece {
             color: Color::White,
             piece_type: PieceType::Rook,
             has_moved: false,
         });
 
         // Knights
-        new_board.board[0][1] = Some(Piece {
+        new_game.board[0][1] = Some(Piece {
             color: Color::White,
             piece_type: PieceType::Knight,
             has_moved: false,
         });
-        new_board.board[0][6] = Some(Piece {
+        new_game.board[0][6] = Some(Piece {
             color: Color::White,
             piece_type: PieceType::Knight,
             has_moved: false,
         });
 
         // Bishops
-        new_board.board[0][2] = Some(Piece {
+        new_game.board[0][2] = Some(Piece {
             color: Color::White,
             piece_type: PieceType::Bishop,
             has_moved: false,
         });
-        new_board.board[0][5] = Some(Piece {
+        new_game.board[0][5] = Some(Piece {
             color: Color::White,
             piece_type: PieceType::Bishop,
             has_moved: false,
         });
 
         // Queen
-        new_board.board[0][3] = Some(Piece {
+        new_game.board[0][3] = Some(Piece {
             color: Color::White,
             piece_type: PieceType::Queen,
             has_moved: false,
         });
 
         // King
-        new_board.board[0][4] = Some(Piece {
+        new_game.board[0][4] = Some(Piece {
             color: Color::White,
             piece_type: PieceType::King,
             has_moved: false,
@@ -127,15 +131,23 @@ impl Board {
         // Mirror board
         for i in 0..2 {
             for j in 0..8 {
-                let mut black_piece = match new_board.board[i][j] {
+                let mut black_piece = match new_game.board[i][j] {
                     Some(piece) => piece,
                     None => continue,
                 };
                 black_piece.color = Color::Black;
-                new_board.board[7 - i][j] = Some(black_piece);
+                new_game.board[7 - i][j] = Some(black_piece);
             }
         }
 
-        return new_board;
+        new_game.next_legal_moves = new_game.get_all_legal_moves();
+
+        return new_game;
+    }
+
+    pub fn print_board(&self) {
+        for row in &self.board {
+            println!("{:?}", row);
+        }
     }
 }

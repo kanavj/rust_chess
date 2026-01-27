@@ -1,4 +1,4 @@
-use super::board::*;
+use super::game::*;
 use super::piece::*;
 
 #[derive(Copy, Clone, Debug)]
@@ -43,8 +43,8 @@ pub struct NormalMove {
     pub capture: Option<Piece>,
 }
 
-impl Board {
-    fn get_all_moves(&self, color: Color) -> Vec<Move> {
+impl Game {
+    fn get_all_moves(&mut self, color: Color) -> Vec<Move> {
         let mut all_moves: Vec<Move> = Vec::new();
 
         for i in 0..self.board.len() {
@@ -60,18 +60,18 @@ impl Board {
         all_moves
     }
 
-    pub fn get_piece_legal_moves(&self, from_position: (usize, usize)) -> Vec<Move> {
-        let mut piece_legal_mvoes: Vec<Move> = Vec::new();
+    pub fn get_piece_legal_moves(&mut self, from_position: (usize, usize)) -> Vec<Move> {
+        let mut piece_legal_moves: Vec<Move> = Vec::new();
         let piece = match self.board[from_position.0][from_position.1] {
             Some(p) => p,
-            None => return piece_legal_mvoes,
+            None => return piece_legal_moves,
         };
         let candidate_moves: Vec<Move> = self.get_piece_moves(from_position);
 
         for mv in candidate_moves {
             let mut copyboard = self.clone();
             // Simulate the next move
-            copyboard.make_move(mv);
+            copyboard.make_move(mv, false);
 
             // If castling, place some kings to check if can castle
             match mv {
@@ -98,16 +98,17 @@ impl Board {
                 _ => {}
             };
 
-            // If we are in check after the move, it's not legal
+            // If we are in check after the move, it's not legal and add all the next moves to the dict
             if copyboard.in_check(piece.color) {
                 continue;
             }
-            piece_legal_mvoes.push(mv);
+            piece_legal_moves.push(mv);
         }
-        piece_legal_mvoes
+        piece_legal_moves
     }
 
-    pub fn get_all_legal_moves(&self, color: Color) -> Vec<Move> {
+    pub fn get_all_legal_moves(&mut self) -> Vec<Move> {
+        let color = self.next_player;
         let mut all_legal_moves: Vec<Move> = Vec::new();
         for i in 0..8 {
             for j in 0..8 {
@@ -121,8 +122,15 @@ impl Board {
         all_legal_moves
     }
 
-    pub fn in_check(&self, color: Color) -> bool {
-        for mv in self.get_all_moves(color.opposite()) {
+    pub fn print_all_legal_moves(&self) {
+        for mv in &self.next_legal_moves {
+            println!("{:?}", mv);
+        }
+    }
+
+    pub fn in_check(&mut self, color: Color) -> bool {
+        let opposite_moves = self.get_all_moves(color.opposite());
+        for mv in &opposite_moves {
             match mv {
                 Move::Normal(normal_move) => {
                     if let Some(piece) = normal_move.capture {
@@ -137,14 +145,37 @@ impl Board {
         return false;
     }
 
-    pub fn make_move(&mut self, mv: Move) {
+    pub fn make_move(&mut self, mv: Move, change_state: bool) {
         match mv {
             Move::Normal(normal_move) => self.make_normal_move(normal_move),
             Move::Castles(castles_move) => self.make_castles_move(castles_move),
             Move::EnPassant(ep_move) => self.make_enpassant_move(ep_move),
             Move::Promotion(pr_move) => self.make_promotion_move(pr_move),
         }
-        self.last_move = mv;
+        // Add move to history
+        self.move_history.push(mv);
+        // Change color
+        self.next_player = self.next_player.opposite();
+        if change_state {
+            // Calculate next moves
+            self.next_legal_moves = self.get_all_legal_moves();
+            // Check if the next player is in check
+            let in_check = self.in_check(self.next_player);
+            // Change board state
+            if self.next_legal_moves.len() == 0 {
+                if in_check {
+                    self.state = GameState::Checkmate(self.next_player);
+                } else {
+                    self.state = GameState::Stalemate;
+                }
+            } else {
+                if in_check {
+                    self.state = GameState::InCheck(self.next_player);
+                } else {
+                    self.state = GameState::Normal;
+                }
+            }
+        }
     }
 
     fn make_normal_move(&mut self, mv: NormalMove) {

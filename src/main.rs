@@ -1,19 +1,14 @@
 pub mod chess_engine;
-use crate::chess_engine::{board::*, read_fen_string::check_fen_str};
+use crate::chess_engine::game::*;
 
 fn main() {
-    let mut my_board = Board::new_standard_board();
+    let my_fen = "8/8/8/6q1/5k2/7K/8/8";
+    let mut game = Game::from_fen_str(my_fen).unwrap();
+    game.next_player = Color::Black;
+    game.next_legal_moves = game.get_all_legal_moves();
 
-    let my_fen = "1r6/8/8/8/8/8/8/R3K2R";
-    println!("{:?}", check_fen_str(my_fen));
-
-    my_board.from_fen_str(my_fen).unwrap();
-
-    for row in my_board.board {
-        println!("{:?}", row);
-    }
-    let all_moves = my_board.get_piece_legal_moves((0, 1));
-    for mv in all_moves {
-        println!("{:?}", mv);
-    }
+    game.print_all_legal_moves();
+    game.make_move(game.next_legal_moves[10], true);
+    println!("{:?}", game.state);
+    game.print_all_legal_moves();
 }
