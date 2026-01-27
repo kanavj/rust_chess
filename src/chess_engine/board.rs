@@ -13,16 +13,16 @@ pub enum Color {
     White,
 }
 
-pub fn board_position_to_notation(row: u8, col: u8) -> String {
+pub fn board_position_to_notation(row: usize, col: usize) -> String {
     if row > 8 || col > 8 {
         panic!("Row: {}, Height: {}. Cannot be greater than 8!", row, col);
     }
-    let firstchar: char = ('A' as u8 + col) as char;
-    let secondchar: char = ('1' as u8 + row) as char;
+    let firstchar: char = ('A' as u8 + col as u8) as char;
+    let secondchar: char = ('1' as u8 + row as u8) as char;
     return format!("{}{}", firstchar, secondchar);
 }
 
-pub fn valid_position(position: (u8, u8)) -> bool {
+pub fn valid_position(position: (usize, usize)) -> bool {
     if position.0 >= 8 || position.1 >= 8 {
         return false;
     }

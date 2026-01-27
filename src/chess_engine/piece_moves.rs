@@ -3,9 +3,9 @@ use super::moves::*;
 use crate::chess_engine::piece::{Piece, PieceType};
 
 impl Board {
-    pub fn get_piece_moves(&self, from_position: (u8, u8)) -> Vec<Move> {
+    pub fn get_piece_moves(&self, from_position: (usize, usize)) -> Vec<Move> {
         // Check if piece is present
-        match self.board[from_position.0 as usize][from_position.1 as usize] {
+        match self.board[from_position.0][from_position.1] {
             Some(piece) => match piece.piece_type {
                 PieceType::Knight => self.knight_legal_moves(from_position, piece),
                 PieceType::Bishop => self.bishop_legal_moves(from_position, piece),
@@ -19,7 +19,7 @@ impl Board {
     }
 
     // Knight ez
-    pub fn knight_legal_moves(&self, from_position: (u8, u8), piece: Piece) -> Vec<Move> {
+    pub fn knight_legal_moves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
         let moves = [
             (-2, -1),
             (-1, -2),
@@ -38,9 +38,10 @@ impl Board {
                 if new_col < 0 || new_row < 0 {
                     return None;
                 }
-                let to_position = (new_row as u8, new_col as u8);
+                let (new_row, new_col) = (new_row as usize, new_col as usize);
+                let to_position = (new_row, new_col);
                 if valid_position(to_position) {
-                    let capture = match self.board[new_row as usize][new_col as usize] {
+                    let capture = match self.board[new_row][new_col] {
                         Some(other_piece) => {
                             if piece.color == other_piece.color {
                                 return None;
@@ -68,10 +69,10 @@ impl Board {
     // Helper function to go along a direction until you reach the end of the board
     fn sliding_moves_in_dir(
         &self,
-        from_position: (u8, u8),
+        from_position: (usize, usize),
         dir: (i32, i32),
         max_dist: Option<i32>,
-    ) -> impl Iterator<Item = ((u8, u8), Option<Piece>)> {
+    ) -> impl Iterator<Item = ((usize, usize), Option<Piece>)> {
         let max_dist = match max_dist {
             Some(number) => number,
             None => 7,
@@ -79,7 +80,7 @@ impl Board {
         (1..max_dist + 1).filter_map(move |i| {
             let new_row = from_position.0 as i32 + dir.0 * i;
             let new_col = from_position.1 as i32 + dir.1 * i;
-            let to_position = (new_row as u8, new_col as u8);
+            let to_position = (new_row as usize, new_col as usize);
 
             if valid_position(to_position) {
                 match self.board[new_row as usize][new_col as usize] {
@@ -92,7 +93,7 @@ impl Board {
         })
     }
 
-    pub fn bishop_legal_moves(&self, from_position: (u8, u8), piece: Piece) -> Vec<Move> {
+    pub fn bishop_legal_moves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
         let mut possible_moves: Vec<Move> = Vec::new();
         let directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
         for dir in directions {
@@ -118,7 +119,7 @@ impl Board {
         possible_moves
     }
 
-    pub fn rook_legal_moves(&self, from_position: (u8, u8), piece: Piece) -> Vec<Move> {
+    pub fn rook_legal_moves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
         let mut possible_moves = Vec::new();
         let directions = [(-1, 0), (0, -1), (1, 0), (0, 1)];
         for dir in directions {
@@ -144,13 +145,13 @@ impl Board {
         possible_moves
     }
 
-    pub fn queen_legalmoves(&self, from_position: (u8, u8), piece: Piece) -> Vec<Move> {
+    pub fn queen_legalmoves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
         let mut b_moves = self.bishop_legal_moves(from_position, piece);
         b_moves.append(&mut self.rook_legal_moves(from_position, piece));
         b_moves
     }
 
-    pub fn king_legal_moves(&self, from_position: (u8, u8), piece: Piece) -> Vec<Move> {
+    pub fn king_legal_moves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
         let mut possible_moves = Vec::new();
         let directions = [
             (-1, 0),
@@ -230,7 +231,7 @@ impl Board {
         castle_moves
     }
 
-    pub fn pawn_legal_moves(&self, from_position: (u8, u8), piece: Piece) -> Vec<Move> {
+    pub fn pawn_legal_moves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
         let mut possible_moves = Vec::new();
         let (vertical_directions, capture_directions) = match piece.color {
             Color::White => ([(1, 0)], [(1, 1), (1, -1)]),
@@ -299,14 +300,13 @@ impl Board {
                 let dist_moved = (mv.from_position.0 as i32 - mv.to_position.0 as i32).abs();
                 if mv.piece.has_moved == false && dist_moved == 2 {
                     if from_position.0 == mv.to_position.0 {
-                        println!("yay");
                         let x_diff = from_position.1 as i32 - mv.to_position.1 as i32;
                         if x_diff.abs() == 1 {
                             possible_moves.push(Move::EnPassant(EnPassantMove {
                                 from_position: from_position,
                                 to_position: (
-                                    (from_position.0 as i32 + vertical_directions[0].0) as u8,
-                                    (from_position.1 as i32 - x_diff) as u8,
+                                    (from_position.0 as i32 + vertical_directions[0].0) as usize,
+                                    (from_position.1 as i32 - x_diff) as usize,
                                 ),
                                 pawn_capture_position: (mv.to_position),
                             }))
@@ -321,13 +321,17 @@ impl Board {
     }
 }
 
-fn check_pawn_promotion(to_position: (u8, u8), piece: Piece) -> bool {
+fn check_pawn_promotion(to_position: (usize, usize), piece: Piece) -> bool {
     assert_eq!(piece.piece_type, PieceType::Pawn);
     (piece.color == Color::White && to_position.0 == 7)
         || (piece.color == Color::Black && to_position.0 == 0)
 }
 
-fn get_promotion_moves(from_position: (u8, u8), to_position: (u8, u8), piece: Piece) -> [Move; 4] {
+fn get_promotion_moves(
+    from_position: (usize, usize),
+    to_position: (usize, usize),
+    piece: Piece,
+) -> [Move; 4] {
     return [
         Move::Promotion(PromotionMove {
             from_position: from_position,

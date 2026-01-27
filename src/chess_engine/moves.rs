@@ -17,8 +17,8 @@ pub enum Move {
 
 #[derive(Copy, Clone, Debug)]
 pub struct PromotionMove {
-    pub from_position: (u8, u8),
-    pub to_position: (u8, u8),
+    pub from_position: (usize, usize),
+    pub to_position: (usize, usize),
     pub new_piece: Piece,
 }
 
@@ -30,16 +30,16 @@ pub struct CastlesMove {
 
 #[derive(Copy, Clone, Debug)]
 pub struct EnPassantMove {
-    pub from_position: (u8, u8),
-    pub to_position: (u8, u8),
-    pub pawn_capture_position: (u8, u8),
+    pub from_position: (usize, usize),
+    pub to_position: (usize, usize),
+    pub pawn_capture_position: (usize, usize),
 }
 
 #[derive(Copy, Clone, Debug)]
 pub struct NormalMove {
     pub piece: Piece,
-    pub from_position: (u8, u8),
-    pub to_position: (u8, u8),
+    pub from_position: (usize, usize),
+    pub to_position: (usize, usize),
     pub capture: Option<Piece>,
 }
 
@@ -52,7 +52,7 @@ impl Board {
                 if let Some(piece) = self.board[i][j]
                     && piece.color == color
                 {
-                    let mut piece_moves = self.get_piece_moves((i as u8, j as u8));
+                    let mut piece_moves = self.get_piece_moves((i, j));
                     all_moves.append(&mut piece_moves);
                 }
             }
@@ -60,9 +60,9 @@ impl Board {
         all_moves
     }
 
-    pub fn get_piece_legal_moves(&self, from_position: (u8, u8)) -> Vec<Move> {
+    pub fn get_piece_legal_moves(&self, from_position: (usize, usize)) -> Vec<Move> {
         let mut piece_legal_mvoes: Vec<Move> = Vec::new();
-        let piece = match self.board[from_position.0 as usize][from_position.1 as usize] {
+        let piece = match self.board[from_position.0][from_position.1] {
             Some(p) => p,
             None => return piece_legal_mvoes,
         };
@@ -113,7 +113,7 @@ impl Board {
             for j in 0..8 {
                 if let Some(piece) = self.board[i][j] {
                     if piece.color == color {
-                        all_legal_moves.append(&mut self.get_piece_legal_moves((i as u8, j as u8)))
+                        all_legal_moves.append(&mut self.get_piece_legal_moves((i, j)))
                     }
                 }
             }
@@ -148,18 +148,21 @@ impl Board {
     }
 
     fn make_normal_move(&mut self, mv: NormalMove) {
-        if let Some(mut piece) =
-            self.board[mv.from_position.0 as usize][mv.from_position.1 as usize]
-        {
-            self.board[mv.from_position.0 as usize][mv.from_position.1 as usize] = None;
+        if let Some(mut piece) = self.board[mv.from_position.0][mv.from_position.1] {
+            self.board[mv.from_position.0][mv.from_position.1] = None;
             piece.has_moved = true;
-            self.board[mv.to_position.0 as usize][mv.to_position.1 as usize] = Some(piece);
+            self.board[mv.to_position.0][mv.to_position.1] = Some(piece);
         }
     }
 
     fn make_castles_move(&mut self, mv: CastlesMove) {
-        let king_starting_col: u8 = 4;
-        let (king_ending_col, row, rook_starting_col, rook_ending_col): (u8, u8, u8, u8);
+        let king_starting_col: usize = 4;
+        let (king_ending_col, row, rook_starting_col, rook_ending_col): (
+            usize,
+            usize,
+            usize,
+            usize,
+        );
         match mv.side {
             CastleSide::King => {
                 king_ending_col = 6;
@@ -180,14 +183,14 @@ impl Board {
                 row = 0;
             }
         };
-        self.board[row as usize][king_starting_col as usize] = None;
-        self.board[row as usize][king_ending_col as usize] = Some(Piece {
+        self.board[row][king_starting_col] = None;
+        self.board[row][king_ending_col] = Some(Piece {
             piece_type: PieceType::King,
             color: mv.color,
             has_moved: true,
         });
-        self.board[row as usize][rook_starting_col as usize] = None;
-        self.board[row as usize][rook_ending_col as usize] = Some(Piece {
+        self.board[row][rook_starting_col] = None;
+        self.board[row][rook_ending_col] = Some(Piece {
             piece_type: PieceType::Rook,
             color: mv.color,
             has_moved: true,
@@ -195,15 +198,15 @@ impl Board {
     }
 
     fn make_promotion_move(&mut self, mv: PromotionMove) {
-        self.board[mv.from_position.0 as usize][mv.from_position.1 as usize] = None;
-        self.board[mv.to_position.0 as usize][mv.to_position.1 as usize] = Some(mv.new_piece);
+        self.board[mv.from_position.0][mv.from_position.1] = None;
+        self.board[mv.to_position.0][mv.to_position.1] = Some(mv.new_piece);
     }
 
     fn make_enpassant_move(&mut self, mv: EnPassantMove) {
-        if let Some(piece) = self.board[mv.from_position.0 as usize][mv.from_position.1 as usize] {
-            self.board[mv.to_position.0 as usize][mv.to_position.1 as usize] = Some(piece);
+        if let Some(piece) = self.board[mv.from_position.0][mv.from_position.1] {
+            self.board[mv.to_position.0][mv.to_position.1] = Some(piece);
         }
-        self.board[mv.from_position.0 as usize][mv.from_position.1 as usize] = None;
-        self.board[mv.pawn_capture_position.0 as usize][mv.pawn_capture_position.1 as usize] = None;
+        self.board[mv.from_position.0][mv.from_position.1] = None;
+        self.board[mv.pawn_capture_position.0][mv.pawn_capture_position.1] = None;
     }
 }
