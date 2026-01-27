@@ -72,6 +72,12 @@ pub fn check_fen_str(fen: &str) -> Result<(), Error> {
     for chr in fen.chars() {
         if chr.is_ascii_digit() {
             let digit = chr.to_digit(10).unwrap();
+            if digit == 0 {
+                return Err(Error::new(
+                    ErrorKind::Other,
+                    "Can't put 0 as a number buddy",
+                ));
+            }
             if digit > 8 {
                 return Err(Error::new(ErrorKind::Other, "Number can't be more than 8"));
             } else {
@@ -81,7 +87,11 @@ pub fn check_fen_str(fen: &str) -> Result<(), Error> {
         }
         if chr == FEN_LINE_SEPARATOR {
             if line_length != 8 {
-                return Err(Error::new(ErrorKind::Other, "Line length too long buddy"));
+                if line_length < 8 {
+                    return Err(Error::new(ErrorKind::Other, "Line length too short buddy"));
+                } else {
+                    return Err(Error::new(ErrorKind::Other, "Line length too long buddy"));
+                }
             } else {
                 line_length = 0;
                 total_lines += 1;
