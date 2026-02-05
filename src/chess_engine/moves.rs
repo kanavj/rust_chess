@@ -1,13 +1,13 @@
 use super::game::*;
 use super::piece::*;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Hash, Eq)]
 pub enum CastleSide {
     Queen,
     King,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Hash, Eq)]
 pub enum Move {
     EnPassant(EnPassantMove),
     Castles(CastlesMove),
@@ -15,27 +15,29 @@ pub enum Move {
     Promotion(PromotionMove),
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Hash, Eq)]
 pub struct PromotionMove {
+    pub piece: Piece,
     pub from_position: (usize, usize),
     pub to_position: (usize, usize),
+    pub capture: Option<Piece>,
     pub new_piece: Piece,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Hash, Eq)]
 pub struct CastlesMove {
     pub color: Color,
     pub side: CastleSide,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Hash, Eq)]
 pub struct EnPassantMove {
     pub from_position: (usize, usize),
     pub to_position: (usize, usize),
     pub pawn_capture_position: (usize, usize),
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Hash, Eq)]
 pub struct NormalMove {
     pub piece: Piece,
     pub from_position: (usize, usize),
@@ -66,12 +68,12 @@ impl Game {
             Some(p) => p,
             None => return piece_legal_moves,
         };
-        let candidate_moves: Vec<Move> = self.get_piece_moves(from_position);
+        let mut candidate_moves: Vec<Move> = self.get_piece_moves(from_position);
 
-        for mv in candidate_moves {
+        for mv in &mut candidate_moves {
             let mut copyboard = self.clone();
             // Simulate the next move
-            copyboard.make_move(mv, false);
+            copyboard.make_move(*mv, false);
 
             // If castling, place some kings to check if can castle
             match mv {
@@ -102,7 +104,7 @@ impl Game {
             if copyboard.in_check(piece.color) {
                 continue;
             }
-            piece_legal_moves.push(mv);
+            piece_legal_moves.push(*mv);
         }
         piece_legal_moves
     }
@@ -152,15 +154,19 @@ impl Game {
             Move::EnPassant(ep_move) => self.make_enpassant_move(ep_move),
             Move::Promotion(pr_move) => self.make_promotion_move(pr_move),
         }
+
         // Add move to history
         self.move_history.push(mv);
+
         // Change color
         self.next_player = self.next_player.opposite();
+
+        // Check if the next player is in check
+        let in_check = self.in_check(self.next_player);
+
         if change_state {
             // Calculate next moves
             self.next_legal_moves = self.get_all_legal_moves();
-            // Check if the next player is in check
-            let in_check = self.in_check(self.next_player);
             // Change board state
             if self.next_legal_moves.len() == 0 {
                 if in_check {

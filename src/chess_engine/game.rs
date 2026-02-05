@@ -18,7 +18,7 @@ pub enum GameState {
     Stalemate,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Hash, Eq)]
 pub enum Color {
     Black,
     White,
@@ -28,7 +28,7 @@ pub fn board_position_to_notation(row: usize, col: usize) -> String {
     if row > 8 || col > 8 {
         panic!("Row: {}, Height: {}. Cannot be greater than 8!", row, col);
     }
-    let firstchar: char = ('A' as u8 + col as u8) as char;
+    let firstchar: char = ('a' as u8 + col as u8) as char;
     let secondchar: char = ('1' as u8 + row as u8) as char;
     return format!("{}{}", firstchar, secondchar);
 }

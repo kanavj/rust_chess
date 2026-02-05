@@ -1,6 +1,6 @@
 use super::game::Color;
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Hash, Eq)]
 pub enum PieceType {
     Pawn,
     Rook,
@@ -10,7 +10,7 @@ pub enum PieceType {
     King,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Hash, Eq)]
 pub struct Piece {
     pub color: Color,
     pub piece_type: PieceType,

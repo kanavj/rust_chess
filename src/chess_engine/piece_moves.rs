@@ -312,7 +312,12 @@ fn add_pawn_move(
     capture: Option<Piece>,
 ) {
     if check_pawn_promotion(to_position, piece) {
-        possible_moves.extend_from_slice(&get_promotion_moves(from_position, to_position, piece));
+        possible_moves.extend_from_slice(&get_promotion_moves(
+            from_position,
+            to_position,
+            piece,
+            capture,
+        ));
     } else {
         let my_move = NormalMove {
             piece: piece,
@@ -334,9 +339,11 @@ fn get_promotion_moves(
     from_position: (usize, usize),
     to_position: (usize, usize),
     piece: Piece,
+    capture: Option<Piece>,
 ) -> [Move; 4] {
     return [
         Move::Promotion(PromotionMove {
+            piece: piece,
             from_position: from_position,
             to_position: to_position,
             new_piece: Piece {
@@ -344,8 +351,10 @@ fn get_promotion_moves(
                 piece_type: PieceType::Bishop,
                 has_moved: true,
             },
+            capture: capture,
         }),
         Move::Promotion(PromotionMove {
+            piece: piece,
             from_position: from_position,
             to_position: to_position,
             new_piece: Piece {
@@ -353,8 +362,10 @@ fn get_promotion_moves(
                 piece_type: PieceType::Knight,
                 has_moved: true,
             },
+            capture: capture,
         }),
         Move::Promotion(PromotionMove {
+            piece: piece,
             from_position: from_position,
             to_position: to_position,
             new_piece: Piece {
@@ -362,8 +373,10 @@ fn get_promotion_moves(
                 piece_type: PieceType::Rook,
                 has_moved: true,
             },
+            capture: capture,
         }),
         Move::Promotion(PromotionMove {
+            piece: piece,
             from_position: from_position,
             to_position: to_position,
             new_piece: Piece {
@@ -371,6 +384,7 @@ fn get_promotion_moves(
                 piece_type: PieceType::Queen,
                 has_moved: true,
             },
+            capture: capture,
         }),
     ];
 }

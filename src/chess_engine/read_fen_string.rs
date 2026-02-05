@@ -46,11 +46,11 @@ impl Game {
             };
             let mut has_moved = false;
             if p_type == PieceType::Pawn {
-                if color == Color::White && row == 1 {
-                    has_moved = false;
+                if !(color == Color::White && row == 1) {
+                    has_moved = true;
                 }
-                if color == Color::Black && row == 6 {
-                    has_moved = false;
+                if !(color == Color::Black && row == 6) {
+                    has_moved = true;
                 }
             }
             let my_piece = Piece {
