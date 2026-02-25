@@ -46,10 +46,10 @@ impl Game {
             };
             let mut has_moved = false;
             if p_type == PieceType::Pawn {
-                if !(color == Color::White && row == 1) {
+                if color == Color::White && row != 1 {
                     has_moved = true;
                 }
-                if !(color == Color::Black && row == 6) {
+                if color == Color::Black && row != 6{
                     has_moved = true;
                 }
             }
@@ -61,8 +61,49 @@ impl Game {
             game.board[row as usize][col as usize] = Some(my_piece);
             col += 1;
         }
-        game.next_legal_moves = game.get_all_legal_moves();
+        game.next_legal_moves = game.get_all_legal_moves(true);
         return Ok(game);
+    }
+
+    pub fn to_fen_str(&self) -> String {
+        let mut result = String::new();
+        let mut blanks = 0;
+        for i in (0..8).rev() {
+            for j in 0..8 {
+                let piece = self.board[i][j];
+                match piece {
+                    Some(p) => {
+                        let mut piece_name = match p.piece_type {
+                            PieceType::Pawn => 'p',
+                            PieceType::Rook => 'r',
+                            PieceType::Knight => 'n',
+                            PieceType::Bishop => 'b',
+                            PieceType::King => 'k',
+                            PieceType::Queen => 'q',
+                        };
+                        if p.color == Color::White {
+                            piece_name = piece_name.to_ascii_uppercase();
+                        }
+                        if blanks > 0 {
+                            result.push(char::from_digit(blanks, 10).unwrap());
+                            blanks = 0;
+                        }
+                        result.push(piece_name);
+                    }
+                    None => {
+                        blanks += 1;
+                    }
+                }
+            }
+            if blanks > 0 {
+                result.push(char::from_digit(blanks, 10).unwrap());
+                blanks = 0;
+            }
+            if i != 0 {
+                result.push('/');
+            }
+        }
+        result
     }
 }
 

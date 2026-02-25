@@ -56,6 +56,7 @@ impl Game {
                         from_position: from_position,
                         to_position,
                         capture: capture,
+                        game_state: GameState::Normal,
                     });
                     Some(my_move)
                 } else {
@@ -103,6 +104,7 @@ impl Game {
                     from_position: from_position,
                     to_position,
                     capture: capture,
+                    game_state: GameState::Normal,
                 };
                 // Check if can capture something on the way
                 if let Some(other_piece) = capture {
@@ -129,6 +131,7 @@ impl Game {
                     from_position: from_position,
                     to_position,
                     capture: capture,
+                    game_state: GameState::Normal,
                 };
                 // Check if can capture something on the way
                 if let Some(other_piece) = capture {
@@ -170,6 +173,7 @@ impl Game {
                     from_position: from_position,
                     to_position,
                     capture: capture,
+                    game_state: GameState::Normal,
                 };
                 // Check if can capture something on the way
                 if let Some(other_piece) = capture {
@@ -209,6 +213,7 @@ impl Game {
                     castle_moves.push(Move::Castles(CastlesMove {
                         color: piece.color,
                         side: CastleSide::King,
+                        game_state: GameState::Normal,
                     }));
                 }
             }
@@ -224,6 +229,7 @@ impl Game {
                     castle_moves.push(Move::Castles(CastlesMove {
                         color: piece.color,
                         side: CastleSide::Queen,
+                        game_state: GameState::Normal,
                     }));
                 }
             }
@@ -291,6 +297,7 @@ impl Game {
                                         (from_position.1 as i32 - x_diff) as usize,
                                     ),
                                     pawn_capture_position: (mv.to_position),
+                                    game_state: GameState::Normal,
                                 }))
                             }
                         }
@@ -324,6 +331,7 @@ fn add_pawn_move(
             from_position: from_position,
             to_position,
             capture: capture,
+            game_state: GameState::Normal,
         };
         possible_moves.push(Move::Normal(my_move));
     }
@@ -352,6 +360,7 @@ fn get_promotion_moves(
                 has_moved: true,
             },
             capture: capture,
+            game_state: GameState::Normal,
         }),
         Move::Promotion(PromotionMove {
             piece: piece,
@@ -363,6 +372,7 @@ fn get_promotion_moves(
                 has_moved: true,
             },
             capture: capture,
+            game_state: GameState::Normal,
         }),
         Move::Promotion(PromotionMove {
             piece: piece,
@@ -374,6 +384,7 @@ fn get_promotion_moves(
                 has_moved: true,
             },
             capture: capture,
+            game_state: GameState::Normal,
         }),
         Move::Promotion(PromotionMove {
             piece: piece,
@@ -385,6 +396,7 @@ fn get_promotion_moves(
                 has_moved: true,
             },
             capture: capture,
+            game_state: GameState::Normal,
         }),
     ];
 }

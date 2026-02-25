@@ -22,12 +22,14 @@ pub struct PromotionMove {
     pub to_position: (usize, usize),
     pub capture: Option<Piece>,
     pub new_piece: Piece,
+    pub game_state: GameState,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Hash, Eq)]
 pub struct CastlesMove {
     pub color: Color,
     pub side: CastleSide,
+    pub game_state: GameState,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Hash, Eq)]
@@ -35,6 +37,7 @@ pub struct EnPassantMove {
     pub from_position: (usize, usize),
     pub to_position: (usize, usize),
     pub pawn_capture_position: (usize, usize),
+    pub game_state: GameState,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Hash, Eq)]
@@ -43,10 +46,31 @@ pub struct NormalMove {
     pub from_position: (usize, usize),
     pub to_position: (usize, usize),
     pub capture: Option<Piece>,
+    pub game_state: GameState,
+}
+
+impl Move {
+    pub fn set_state(&mut self, state: GameState) {
+        match self {
+            Move::Normal(mv) => mv.game_state = state,
+            Move::Castles(mv) => mv.game_state = state,
+            Move::EnPassant(mv) => mv.game_state = state,
+            Move::Promotion(mv) => mv.game_state = state,
+        };
+    }
+
+    pub fn get_state(&self) -> GameState {
+        match self {
+            Move::Normal(mv) => mv.game_state,
+            Move::Castles(mv) => mv.game_state,
+            Move::EnPassant(mv) => mv.game_state,
+            Move::Promotion(mv) => mv.game_state,
+        }
+    }
 }
 
 impl Game {
-    fn get_all_moves(&mut self, color: Color) -> Vec<Move> {
+    fn get_all_moves(&self, color: Color) -> Vec<Move> {
         let mut all_moves: Vec<Move> = Vec::new();
 
         for i in 0..self.board.len() {
@@ -62,7 +86,11 @@ impl Game {
         all_moves
     }
 
-    pub fn get_piece_legal_moves(&mut self, from_position: (usize, usize)) -> Vec<Move> {
+    pub fn get_piece_legal_moves(
+        &self,
+        from_position: (usize, usize),
+        check_next: bool,
+    ) -> Vec<Move> {
         let mut piece_legal_moves: Vec<Move> = Vec::new();
         let piece = match self.board[from_position.0][from_position.1] {
             Some(p) => p,
@@ -81,7 +109,7 @@ impl Game {
                     let new_king = Piece {
                         color: piece.color,
                         piece_type: PieceType::King,
-                        has_moved: false,
+                        has_moved: true,
                     };
                     let row: usize = match castles_mv.color {
                         Color::White => 0,
@@ -93,6 +121,7 @@ impl Game {
                             copyboard.board[row][5] = Some(new_king);
                         }
                         CastleSide::Queen => {
+                            copyboard.board[row][4] = Some(new_king);
                             copyboard.board[row][3] = Some(new_king);
                         }
                     }
@@ -104,19 +133,64 @@ impl Game {
             if copyboard.in_check(piece.color) {
                 continue;
             }
+
+            // Replace the new kings with previous things if castled
+
+            match mv{
+                Move::Castles(castles_mv) => {
+                    let new_rook = Piece {
+                        color: piece.color,
+                        piece_type: PieceType::Rook,
+                        has_moved: true,
+                    };
+                    let row: usize = match castles_mv.color {
+                        Color::White => 0,
+                        Color::Black => 7,
+                    };
+                    match castles_mv.side {
+                        CastleSide::King => {
+                            copyboard.board[row][4] = None;
+                            copyboard.board[row][5] = Some(new_rook);
+                        }
+                        CastleSide::Queen => {
+                            copyboard.board[row][4] = None;
+                            copyboard.board[row][3] = Some(new_rook);
+                        }
+                    }
+                },
+                _ => {},
+            }
+
+            let in_check = copyboard.in_check(piece.color.opposite());
+
+            if in_check {
+                mv.set_state(GameState::InCheck(piece.color.opposite()));
+            }
+
+            if check_next {
+                let next_moves = copyboard.get_all_legal_moves(false);
+                if next_moves.len() == 0 {
+                    if in_check {
+                        mv.set_state(GameState::Checkmate(piece.color.opposite()));
+                    } else {
+                        mv.set_state(GameState::Stalemate);
+                    }
+                }
+            }
+
             piece_legal_moves.push(*mv);
         }
         piece_legal_moves
     }
 
-    pub fn get_all_legal_moves(&mut self) -> Vec<Move> {
+    pub fn get_all_legal_moves(&self, check_next: bool) -> Vec<Move> {
         let color = self.next_player;
         let mut all_legal_moves: Vec<Move> = Vec::new();
         for i in 0..8 {
             for j in 0..8 {
                 if let Some(piece) = self.board[i][j] {
                     if piece.color == color {
-                        all_legal_moves.append(&mut self.get_piece_legal_moves((i, j)))
+                        all_legal_moves.append(&mut self.get_piece_legal_moves((i, j), check_next))
                     }
                 }
             }
@@ -141,18 +215,37 @@ impl Game {
                         }
                     }
                 }
+                Move::Promotion(p_move) => {
+                    if let Some(piece) = p_move.capture {
+                        if piece.piece_type == PieceType::King && piece.color == color {
+                            return true;
+                        }
+                    }
+                }
                 _ => {}
             };
         }
         return false;
     }
 
-    pub fn make_move(&mut self, mv: Move, change_state: bool) {
+    pub fn make_move(&mut self, mv: Move, check_next: bool) {
         match mv {
-            Move::Normal(normal_move) => self.make_normal_move(normal_move),
-            Move::Castles(castles_move) => self.make_castles_move(castles_move),
-            Move::EnPassant(ep_move) => self.make_enpassant_move(ep_move),
-            Move::Promotion(pr_move) => self.make_promotion_move(pr_move),
+            Move::Normal(normal_move) => {
+                self.make_normal_move(normal_move);
+                self.state = normal_move.game_state
+            }
+            Move::Castles(castles_move) => {
+                self.make_castles_move(castles_move);
+                self.state = castles_move.game_state
+            }
+            Move::EnPassant(ep_move) => {
+                self.make_enpassant_move(ep_move);
+                self.state = ep_move.game_state
+            }
+            Move::Promotion(pr_move) => {
+                self.make_promotion_move(pr_move);
+                self.state = pr_move.game_state
+            }
         }
 
         // Add move to history
@@ -160,27 +253,10 @@ impl Game {
 
         // Change color
         self.next_player = self.next_player.opposite();
-
-        // Check if the next player is in check
-        let in_check = self.in_check(self.next_player);
-
-        if change_state {
-            // Calculate next moves
-            self.next_legal_moves = self.get_all_legal_moves();
-            // Change board state
-            if self.next_legal_moves.len() == 0 {
-                if in_check {
-                    self.state = GameState::Checkmate(self.next_player);
-                } else {
-                    self.state = GameState::Stalemate;
-                }
-            } else {
-                if in_check {
-                    self.state = GameState::InCheck(self.next_player);
-                } else {
-                    self.state = GameState::Normal;
-                }
-            }
+        if check_next {
+            self.next_legal_moves = self.get_all_legal_moves(check_next);
+        } else {
+            self.next_legal_moves = self.get_all_moves(self.next_player);
         }
     }
 

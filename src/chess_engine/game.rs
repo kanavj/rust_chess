@@ -1,16 +1,18 @@
 use super::moves::*;
 use super::piece::{Piece, PieceType};
 
+type BoardType = [[Option<Piece>; 8]; 8];
+
 #[derive(Clone, Debug)]
 pub struct Game {
-    pub board: [[Option<Piece>; 8]; 8],
+    pub board: BoardType,
     pub next_player: Color,
     pub move_history: Vec<Move>,
     pub state: GameState,
     pub next_legal_moves: Vec<Move>,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Hash, Eq)]
 pub enum GameState {
     Normal,
     InCheck(Color),
@@ -51,7 +53,7 @@ impl Game {
             state: GameState::Normal,
             next_legal_moves: Vec::new(),
         };
-        new_game.next_legal_moves = new_game.get_all_legal_moves();
+        new_game.next_legal_moves = new_game.get_all_legal_moves(true);
         return new_game;
     }
 
@@ -140,7 +142,7 @@ impl Game {
             }
         }
 
-        new_game.next_legal_moves = new_game.get_all_legal_moves();
+        new_game.next_legal_moves = (&new_game).get_all_legal_moves(true);
 
         return new_game;
     }
