@@ -30,7 +30,7 @@ impl Game {
         output_map
     }
 
-    pub fn mv_to_str(&self, mv: Move) -> String {
+    fn mv_to_str(&self, mv: Move) -> String {
         match mv {
             Move::Normal(mv) => {
                 let is_capture = mv.capture.is_some();

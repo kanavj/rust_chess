@@ -51,7 +51,7 @@ pub struct NormalMove {
 }
 
 impl Move {
-    pub fn set_state(&mut self, state: GameState) {
+    fn set_state(&mut self, state: GameState) {
         match self {
             Move::Normal(mv) => mv.game_state = state,
             Move::Castles(mv) => mv.game_state = state,
@@ -87,7 +87,7 @@ impl Game {
         all_moves
     }
 
-    pub fn get_piece_legal_moves(
+    fn get_piece_legal_moves(
         &self,
         from_position: (usize, usize),
         check_next: bool,
@@ -177,18 +177,12 @@ impl Game {
                             Vec::new()
                         }
                     })
-                    .collect::<Vec<Move>>()
+                    .collect::<Vec<_>>()
             })
             .collect()
     }
 
-    pub fn print_all_legal_moves(&self) {
-        for mv in &self.next_legal_moves {
-            println!("{:?}", mv);
-        }
-    }
-
-    pub fn in_check(&mut self, color: Color) -> bool {
+    fn in_check(&mut self, color: Color) -> bool {
         let opposite_moves = self.get_all_moves(color.opposite());
         for mv in &opposite_moves {
             match mv {

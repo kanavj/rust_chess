@@ -1,7 +1,9 @@
+use core::fmt;
+
 use super::moves::*;
 use super::piece::{Piece, PieceType};
 
-type BoardType = [[Option<Piece>; 8]; 8];
+pub type BoardType = [[Option<Piece>; 8]; 8];
 
 #[derive(Clone, Debug)]
 pub struct Game {
@@ -24,6 +26,16 @@ pub enum GameState {
 pub enum Color {
     Black,
     White,
+}
+
+impl fmt::Display for Color {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let name = match self {
+            Color::Black => "Black",
+            Color::White => "White",
+        };
+        write!(f, "{}", name)
+    }
 }
 
 pub fn board_position_to_notation(row: usize, col: usize) -> String {

@@ -19,7 +19,7 @@ impl Game {
     }
 
     // Knight ez
-    pub fn knight_legal_moves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
+    fn knight_legal_moves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
         let moves = [
             (-2, -1),
             (-1, -2),
@@ -94,7 +94,7 @@ impl Game {
         })
     }
 
-    pub fn bishop_legal_moves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
+    fn bishop_legal_moves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
         let mut possible_moves: Vec<Move> = Vec::new();
         let directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
         for dir in directions {
@@ -121,7 +121,7 @@ impl Game {
         possible_moves
     }
 
-    pub fn rook_legal_moves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
+    fn rook_legal_moves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
         let mut possible_moves = Vec::new();
         let directions = [(-1, 0), (0, -1), (1, 0), (0, 1)];
         for dir in directions {
@@ -148,13 +148,13 @@ impl Game {
         possible_moves
     }
 
-    pub fn queen_legalmoves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
+    fn queen_legalmoves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
         let mut b_moves = self.bishop_legal_moves(from_position, piece);
         b_moves.append(&mut self.rook_legal_moves(from_position, piece));
         b_moves
     }
 
-    pub fn king_legal_moves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
+    fn king_legal_moves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
         let mut possible_moves = Vec::new();
         let directions = [
             (-1, 0),
@@ -194,7 +194,7 @@ impl Game {
         possible_moves
     }
 
-    pub fn king_castles_moves(&self, piece: Piece) -> Vec<Move> {
+    fn king_castles_moves(&self, piece: Piece) -> Vec<Move> {
         let mut castle_moves = Vec::new();
         if piece.has_moved {
             return castle_moves;
@@ -237,7 +237,7 @@ impl Game {
         castle_moves
     }
 
-    pub fn pawn_legal_moves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
+    fn pawn_legal_moves(&self, from_position: (usize, usize), piece: Piece) -> Vec<Move> {
         let mut possible_moves = Vec::new();
         let (vertical_dir, capture_directions) = match piece.color {
             Color::White => ((1, 0), [(1, 1), (1, -1)]),
