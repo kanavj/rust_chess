@@ -49,7 +49,7 @@ impl Game {
                 if color == Color::White && row != 1 {
                     has_moved = true;
                 }
-                if color == Color::Black && row != 6{
+                if color == Color::Black && row != 6 {
                     has_moved = true;
                 }
             }

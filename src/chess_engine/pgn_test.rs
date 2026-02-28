@@ -1,6 +1,6 @@
-use std::io::Error;
-use rayon::prelude::*;
 use super::{game, pgn_read};
+use rayon::prelude::*;
+use std::io::Error;
 
 pub fn pgn_test(filepath: &str, games_to_read: usize) -> Result<(), Error> {
     let db_games = pgn_read::read_games(filepath, games_to_read)?;
@@ -11,7 +11,7 @@ pub fn pgn_test(filepath: &str, games_to_read: usize) -> Result<(), Error> {
                 let moves_map = my_game.mvs_to_str();
 
                 if let Some(&mv) = moves_map.get(&db_move) {
-                    my_game.make_move(mv, true);
+                    my_game.make_move(mv);
                     continue;
                 }
                 if let Some(&_mv) = moves_map.get(&db_move.replace("+", "#")){

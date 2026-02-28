@@ -9,7 +9,7 @@ fn main() {
     game.next_player = Color::White;
     game.next_legal_moves = game.get_all_legal_moves(true);
     let mvs = game.mvs_to_str();
-    
+
     for mv in mvs {
         println!("{:?} \t  {}", mv.1, mv.0);
     }

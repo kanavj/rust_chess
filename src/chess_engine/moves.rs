@@ -1,5 +1,6 @@
 use super::game::*;
 use super::piece::*;
+use rayon::prelude::*;
 
 #[derive(Copy, Clone, Debug, PartialEq, Hash, Eq)]
 pub enum CastleSide {
@@ -101,7 +102,7 @@ impl Game {
         for mv in &mut candidate_moves {
             let mut copyboard = self.clone();
             // Simulate the next move
-            copyboard.make_move(*mv, false);
+            copyboard.make_move_helper(*mv, false);
 
             // If castling, place some kings to check if can castle
             match mv {
@@ -135,31 +136,7 @@ impl Game {
             }
 
             // Replace the new kings with previous things if castled
-
-            match mv{
-                Move::Castles(castles_mv) => {
-                    let new_rook = Piece {
-                        color: piece.color,
-                        piece_type: PieceType::Rook,
-                        has_moved: true,
-                    };
-                    let row: usize = match castles_mv.color {
-                        Color::White => 0,
-                        Color::Black => 7,
-                    };
-                    match castles_mv.side {
-                        CastleSide::King => {
-                            copyboard.board[row][4] = None;
-                            copyboard.board[row][5] = Some(new_rook);
-                        }
-                        CastleSide::Queen => {
-                            copyboard.board[row][4] = None;
-                            copyboard.board[row][3] = Some(new_rook);
-                        }
-                    }
-                },
-                _ => {},
-            }
+            copyboard.make_move_only(*mv);
 
             let in_check = copyboard.in_check(piece.color.opposite());
 
@@ -185,17 +162,24 @@ impl Game {
 
     pub fn get_all_legal_moves(&self, check_next: bool) -> Vec<Move> {
         let color = self.next_player;
-        let mut all_legal_moves: Vec<Move> = Vec::new();
-        for i in 0..8 {
-            for j in 0..8 {
-                if let Some(piece) = self.board[i][j] {
-                    if piece.color == color {
-                        all_legal_moves.append(&mut self.get_piece_legal_moves((i, j), check_next))
-                    }
-                }
-            }
-        }
-        all_legal_moves
+        self.board
+            .into_par_iter()
+            .enumerate()
+            .flat_map(|(i, row)| {
+                row.into_par_iter()
+                    .enumerate()
+                    .flat_map(|(j, place)| {
+                        if let Some(piece) = place
+                            && piece.color == color
+                        {
+                            self.get_piece_legal_moves((i, j), check_next)
+                        } else {
+                            Vec::new()
+                        }
+                    })
+                    .collect::<Vec<Move>>()
+            })
+            .collect()
     }
 
     pub fn print_all_legal_moves(&self) {
@@ -228,25 +212,13 @@ impl Game {
         return false;
     }
 
-    pub fn make_move(&mut self, mv: Move, check_next: bool) {
-        match mv {
-            Move::Normal(normal_move) => {
-                self.make_normal_move(normal_move);
-                self.state = normal_move.game_state
-            }
-            Move::Castles(castles_move) => {
-                self.make_castles_move(castles_move);
-                self.state = castles_move.game_state
-            }
-            Move::EnPassant(ep_move) => {
-                self.make_enpassant_move(ep_move);
-                self.state = ep_move.game_state
-            }
-            Move::Promotion(pr_move) => {
-                self.make_promotion_move(pr_move);
-                self.state = pr_move.game_state
-            }
-        }
+    pub fn make_move(&mut self, mv: Move) {
+        self.make_move_helper(mv, true);
+    }
+
+    fn make_move_helper(&mut self, mv: Move, check_next: bool) {
+        self.make_move_only(mv);
+        self.state = mv.get_state();
 
         // Add move to history
         self.move_history.push(mv);
@@ -260,12 +232,28 @@ impl Game {
         }
     }
 
-    fn make_normal_move(&mut self, mv: NormalMove) {
-        if let Some(mut piece) = self.board[mv.from_position.0][mv.from_position.1] {
-            self.board[mv.from_position.0][mv.from_position.1] = None;
-            piece.has_moved = true;
-            self.board[mv.to_position.0][mv.to_position.1] = Some(piece);
+    fn make_move_only(&mut self, mv: Move) {
+        match mv {
+            Move::Normal(normal_move) => {
+                self.make_normal_move(normal_move);
+            }
+            Move::Castles(castles_move) => {
+                self.make_castles_move(castles_move);
+            }
+            Move::EnPassant(ep_move) => {
+                self.make_enpassant_move(ep_move);
+            }
+            Move::Promotion(pr_move) => {
+                self.make_promotion_move(pr_move);
+            }
         }
+    }
+
+    fn make_normal_move(&mut self, mv: NormalMove) {
+        self.board[mv.from_position.0][mv.from_position.1] = None;
+        let mut pc = mv.piece;
+        pc.has_moved = true;
+        self.board[mv.to_position.0][mv.to_position.1] = Some(pc);
     }
 
     fn make_castles_move(&mut self, mv: CastlesMove) {
