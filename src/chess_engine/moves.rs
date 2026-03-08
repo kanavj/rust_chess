@@ -68,6 +68,32 @@ impl Move {
             Move::Promotion(mv) => mv.game_state,
         }
     }
+
+    pub fn get_from_position(&self) -> (usize, usize) {
+        match self {
+            Move::Normal(mv) => mv.from_position,
+            Move::Castles(mv) => {
+                let row = if mv.color == Color::White { 0 } else { 7 };
+                let col = 4;
+                (row, col)
+            }
+            Move::EnPassant(mv) => mv.from_position,
+            Move::Promotion(mv) => mv.from_position,
+        }
+    }
+
+    pub fn get_to_position(&self) -> (usize, usize) {
+        match self {
+            Move::Normal(mv) => mv.to_position,
+            Move::Castles(mv) => {
+                let row = if mv.color == Color::White { 0 } else { 7 };
+                let col = if mv.side == CastleSide::King { 6 } else { 2 };
+                (row, col)
+            }
+            Move::EnPassant(mv) => mv.to_position,
+            Move::Promotion(mv) => mv.to_position,
+        }
+    }
 }
 
 impl Game {
@@ -87,11 +113,7 @@ impl Game {
         all_moves
     }
 
-    fn get_piece_legal_moves(
-        &self,
-        from_position: (usize, usize),
-        check_next: bool,
-    ) -> Vec<Move> {
+    fn get_piece_legal_moves(&self, from_position: (usize, usize), check_next: bool) -> Vec<Move> {
         let mut piece_legal_moves: Vec<Move> = Vec::new();
         let piece = match self.board[from_position.0][from_position.1] {
             Some(p) => p,
@@ -303,5 +325,18 @@ impl Game {
         }
         self.board[mv.from_position.0][mv.from_position.1] = None;
         self.board[mv.pawn_capture_position.0][mv.pawn_capture_position.1] = None;
+    }
+
+    pub fn moves_from_square(&self, position: (usize, usize)) -> Vec<Move> {
+        self.next_legal_moves
+            .iter()
+            .filter_map(|mv| {
+                if mv.get_from_position() == position {
+                    Some(*mv)
+                } else {
+                    None
+                }
+            })
+            .collect::<Vec<_>>()
     }
 }

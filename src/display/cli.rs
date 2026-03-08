@@ -15,7 +15,11 @@ impl CLIDisplayer {
 }
 
 impl Display for CLIDisplayer {
-    fn display(&self, game: &Game) {
+    fn display_message(&self, message: String) {
+        println!("{}", message);
+    }
+
+    async fn display(&mut self, game: &Game) {
         let (n_rows, n_cols) = (game.board.len(), game.board[0].len());
 
         let (row_pad, col_pad) = (1, 2);
@@ -55,11 +59,7 @@ impl Display for CLIDisplayer {
         self.display_moves(game);
     }
 
-    fn display_message(&self, message: String) {
-        println!("{}", message);
-    }
-
-    fn user_input(&self, game: &Game) -> Move {
+    fn user_input(&mut self, game: &Game) -> Option<Move> {
         let possible_moves = game.mvs_to_str();
         let mut user_input = String::new();
 
@@ -78,7 +78,7 @@ impl Display for CLIDisplayer {
                 .expect("Enter a valid string please");
             user_input = user_input.trim().to_string();
         }
-        possible_moves[&user_input]
+        Some(possible_moves[&user_input])
     }
 }
 

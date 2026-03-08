@@ -1,20 +1,20 @@
 use crate::Display;
 use crate::game::{Game, GameState};
 
-pub struct GameController<'a, D: Display> {
+pub struct GameController<D: Display> {
     game: Game,
-    displayer: &'a D,
+    displayer: D,
 }
 
-impl<'a, D: Display> GameController<'a, D> {
-    pub fn new(game: Game, display: &'a D) -> Self {
+impl<D: Display> GameController<D> {
+    pub fn new(game: Game, display: D) -> Self {
         GameController {
             game,
             displayer: display,
         }
     }
 
-    pub fn run(&mut self) {
+    pub async fn run(&mut self) {
         loop {
             match self.game.state {
                 GameState::Checkmate(col) => {
@@ -31,10 +31,12 @@ impl<'a, D: Display> GameController<'a, D> {
                 _ => {}
             }
 
-            self.displayer.display(&self.game);
+            self.displayer.display(&self.game).await;
 
             let user_move = self.displayer.user_input(&self.game);
-            self.game.make_move(user_move);
+            if let Some(mv) = user_move {
+                self.game.make_move(mv);
+            }
         }
     }
 }

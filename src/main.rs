@@ -1,6 +1,8 @@
-use chess::{cli::CLIDisplayer, game, game_controller::GameController};
+use chess::{game::Game, game_controller::GameController, gui::GUIDisplayer};
 
-fn main() {
-    let mut my_controller = GameController::new(game::Game::from_standard_board(), &CLIDisplayer);
-    my_controller.run();
+#[macroquad::main("Chess")]
+async fn main() {
+    let displayer = GUIDisplayer::new(8, 8).await;
+    let mut my_controller = GameController::new(Game::from_standard_board(), displayer);
+    my_controller.run().await;
 }
